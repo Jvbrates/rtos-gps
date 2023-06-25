@@ -21,13 +21,33 @@ pthread_mutex_t limit_speed_sync;
 
 int main(){
 
-  struct {int * a;}aa;
+  FILE * f = fopen("test", "w+");
 
-  aa.a = malloc(sizeof(int));
+  int a[5], b[4];
+  b[0] = 64;
+  a[0] = 0xF;
+  a[1] = 0xF;
+  a[2] = 0xF;
+  a[3] = 0xFFFFFFFF;
+  a[4] = 0xF11E;
 
-  *((&aa)->a) = 2;
-  (*((&aa)->a))++;
 
-  printf("%d", *(aa.a));
+  fwrite(a, sizeof(char), 16, f);
+
+  fseek(f, 0, SEEK_SET);
+
+  unsigned int t = fread(b, sizeof(int), 16, f);
+  unsigned int r = fread(b, sizeof(int), 16, f);
+
+
+  for (int i = 0; i < 4; ++i) {
+    printf("[%d]\n", *(b+i));
+  }
+
+
+  printf("%u\n", r);
+  printf("%u", t);
+  fclose(f);
+
   return 0;
 }

@@ -55,5 +55,5 @@ typedef struct {
 } gps_struct_t;
 
 void gps_set(gps_struct_t *write_in);
-
+double haversine_distance(gpgga_t_simplified A, gpgga_t_simplified B);
 #endif // RTOS_GPS_GPS_SENSOR_H

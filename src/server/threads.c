@@ -101,6 +101,8 @@ typedef struct {
   loop_control enable;
 } blocker_tracker_thread_arg;
 
+// TODO BLOCK_TRACKER_THREAD  fazer TRACKER com variavel de condição
+
 void blocker_tracker_thread(void *structure){
 
 /* Eu poderia implementar de forma a usar
