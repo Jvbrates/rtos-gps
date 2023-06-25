@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /*The data get by gps antenna will be recorded in a variable(??? obvious),
  * this var also will be read. Then need a mutex*/
@@ -20,10 +21,13 @@ pthread_mutex_t limit_speed_sync;
 
 int main(){
 
-  int x = 0;
+  struct {int * a;}aa;
 
-  while(1) {
+  aa.a = malloc(sizeof(int));
 
-  }
+  *((&aa)->a) = 2;
+  (*((&aa)->a))++;
+
+  printf("%d", *(aa.a));
   return 0;
 }

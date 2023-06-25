@@ -5,8 +5,14 @@
 #include "headers/gps_sensor.h"
 #include "headers/velocimeter.h"
 #include "headers/speed_limiter.h"
+#include "headers/data_record.h"
 
 #include "signal.h"
+
+typedef int cond_control;
+typedef int loop_control;
+
+
 typedef struct {
   gpgga_t_simplified *global_pos;
   pthread_mutex_t *mutex_globals_pos;
@@ -14,7 +20,6 @@ typedef struct {
   sigset_t *expected_signals;
 
 } gps_set_thread_arg;
-
 
 
 void gps_set_thread(void *structure){
@@ -27,28 +32,81 @@ void gps_set_thread(void *structure){
     int signal_recv; //To linter no complain
     sigwait(arg->expected_signals, &signal_recv);
 
-    gps_set(&(gps_struct_t){arg->global_pos, arg->mutex});
+    gps_set(&(gps_struct_t){arg->global_pos, arg->mutex_globals_pos});
 
-    // New gps value got, wakeup the record
+    // New gps value got, wakeup the data_record_thread
     pthread_cond_signal(arg->record_cond);
   }
-  pthread_exit(NULL); //if gps_set returned something, it would return here
+
+  pthread_exit(NULL);
 
 }
 
 typedef struct {
-  gpgga_t_simplified *global_position;
-  pthread_mutex_t *mutex_globals_pos;
-} data_record_thread_arg;
 
+  cond_control *record_req;
+  pthread_mutex_t *record_mut;
+  pthread_cond_t *record_cond;
+
+  file_stat *fs;
+  speed_struct_t speed_limit;
+  speed_struct_t instant_speed;
+  gps_struct_t gps;
+
+  loop_control *enable;
+
+} data_record_thread_arg;
 
 void data_record_thread(void *structure){
 
   data_record_thread_arg  *arg = (data_record_thread_arg * )structure;
 
-  //  TODO {Ask Isto seria uma boa prática?}
-  pthread_mutex_lock(arg->mutex_globals_pos);
-    gpgga_t_simplified local_copy = *(arg->global_position);
-  pthread_mutex_lock(arg->mutex_globals_pos);
+  while(arg->enable){
+
+    //Variável de condição
+    pthread_mutex_lock(arg->record_mut);
+    while ( *(arg->record_req) <= 0){
+      pthread_cond_wait(arg->record_cond, arg->record_mut);
+    }
+    (*(arg->record_req))--;
+    pthread_mutex_unlock(arg->record_mut);
+
+
+    // Cria a linha que será escrita
+    data_line dl;
+
+    pthread_mutex_lock(arg->gps.mutex);
+    dl.position = *(arg->gps.data);
+    pthread_mutex_unlock(arg->gps.mutex);
+
+    pthread_mutex_lock(arg->speed_limit.mutex);
+    dl.max_speed = *(arg->speed_limit.data);
+    pthread_mutex_unlock(arg->speed_limit.mutex);
+
+    pthread_mutex_lock(arg->instant_speed.mutex);
+    dl.instant_speed = *(arg->instant_speed.data);
+    pthread_mutex_unlock(arg->instant_speed.mutex);
+
+    //Aqui tambem ocorre mutex lock/unlock
+    data_record(arg->fs, dl);
+
+  }
+
+  pthread_exit(NULL);
+
 }
 
+typedef struct {
+  char file_path[250];
+  loop_control enable;
+} blocker_tracker_thread_arg;
+
+void blocker_tracker_thread(void *structure){
+
+/* Eu poderia implementar de forma a usar
+ * múltiplas threads para realizar o calculo de haversine,
+ * mas exigiria mais tempo.
+ * */
+
+  pthread_exit(NULL);
+}

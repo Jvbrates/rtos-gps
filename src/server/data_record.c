@@ -14,21 +14,9 @@
  * comando do client), não seria melhor mante-lo sempre aberto?
  * */
 
-typedef struct {
-  char file_path[50];
-  int line_size;
-  int line_count;
-} file_stat;
-
-
-typedef struct {
-  gpgga_t_simplified position;
-  speed instant_speed;
-  speed max_speed;
-} data_line;
 
 int data_record(file_stat *fs, data_line write_data){
-
+    pthread_mutex_t *mutex = fs->mutex;
     FILE * fpointer = fopen(fs->file_path, "a");
 
     if(!fpointer)
@@ -51,7 +39,11 @@ int data_record(file_stat *fs, data_line write_data){
 
     /* After write increment the number of lines, this prevents race conditions
      * with read function (the read operation is limited by num of lines)*/
+    if(mutex)
+      pthread_mutex_lock(mutex);
     fs->line_count++;
+    if(mutex)
+      pthread_mutex_unlock(mutex);
 
     return 0;
 };
