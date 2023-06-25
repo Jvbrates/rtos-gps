@@ -1,12 +1,8 @@
 #include "stdio.h"
 #include "headers/gps_sensor.h"
+#include "headers/blocker_tracker.h"
 
 
-typedef struct {
-  char file_path[500];
-  unsigned int seek_pointer;
-
-}route_file;
 
 typedef struct {
   double latitude;
@@ -16,10 +12,14 @@ typedef struct {
 
 
 
+/* Eu poderia implementar de forma a usar
+ * múltiplas threads para realizar o calculo de haversine,
+ * mas exigiria mais tempo.
+ * */
 // NOTE: Função não otimizada
-int on_route(route_file r, gpgga_t_simplified position){
+int on_route(char file_path[500], gpgga_t_simplified position){
 
-  FILE * file = fopen(r.file_path, "r");
+  FILE * file = fopen(file_path, "r");
 
   if(!file)
     return 0xF17E;
