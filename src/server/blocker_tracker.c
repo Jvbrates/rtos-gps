@@ -13,7 +13,7 @@ typedef struct {
 
 
 // NOTE: Função não otimizada
-int on_route(char file_path[500], gpgga_t_simplified position){
+int on_route(char file_path[250], gpgga_t_simplified position){
 
   FILE * file = fopen(file_path, "r");
 
@@ -25,13 +25,13 @@ int on_route(char file_path[500], gpgga_t_simplified position){
       fscanf(file, "%lf,%lf,%lf",
              &(pr_read.longitude),&(pr_read.latitude),&(pr_read.ray)) == 3
       ){
-    double  distance = haversine_distance(position, (gpgga_t_simplified){pr_read.latitude, pr_read.longitude});
+    double  distance = haversine_distance(position, (gpgga_t_simplified){pr_read.latitude, pr_read.longitude, 0});
 
     printf("Distancia %lf\n", distance);
 
       if(
           haversine_distance(
-              position, (gpgga_t_simplified){pr_read.latitude, pr_read.longitude})
+              position, (gpgga_t_simplified){pr_read.latitude, pr_read.longitude, 0})
           < pr_read.ray){
         return 1; // on_route
       }
