@@ -29,7 +29,7 @@ data_record_thread_arg record_struct;
 file_stat fs_record;
 
 //GPS
-gpgga_t_simplified global_position;
+gpgga_t_simplified GPS_DATA;
 pthread_mutex_t  global_position_mutex;
 
 gps_set_thread_arg gps_set_struct;
@@ -41,23 +41,23 @@ blocker_thread_arg  blocker_s;
 //Reducer
 reducer_thread_arg reducer_s;
 
-//speed_limit
-speed_struct_t speed_limit;
-//instant_speed
-speed_struct_t instant_speed;
+//SPEED_LIMIT
+speed_struct_t SPEED_LIMIT;
+//INST_SPEED
+speed_struct_t INST_SPEED;
 
 void init(){
 
   //Speed Limit
-  speed_limit.data = malloc(sizeof(double ));
-  *(speed_limit.data) = 50;
-  speed_limit.mutex = malloc(sizeof(pthread_mutex_t));
-  pthread_mutex_init(speed_limit.mutex, NULL);
+  SPEED_LIMIT.data = malloc(sizeof(double ));
+  *(SPEED_LIMIT.data) = 50;
+  SPEED_LIMIT.mutex = malloc(sizeof(pthread_mutex_t));
+  pthread_mutex_init(SPEED_LIMIT.mutex, NULL);
 
   //Instant Speed
-  instant_speed.data = malloc(sizeof(double ));
-  instant_speed.mutex = malloc(sizeof(pthread_mutex_t));
-  pthread_mutex_init(instant_speed.mutex, NULL);
+  INST_SPEED.data = malloc(sizeof(double ));
+  INST_SPEED.mutex = malloc(sizeof(pthread_mutex_t));
+  pthread_mutex_init(INST_SPEED.mutex, NULL);
 
 
   //file record
@@ -78,15 +78,15 @@ void init(){
   record_struct.record_cond = record_cond;
   record_struct.enable = malloc(sizeof (int));
   *(record_struct.enable) = 1;
-  record_struct.instant_speed = instant_speed;
-  record_struct.speed_limit = speed_limit;
+  record_struct.instant_speed = INST_SPEED;
+  record_struct.speed_limit = SPEED_LIMIT;
   record_struct.fs = &fs_record;
-  record_struct.gps.data = &global_position;
+  record_struct.gps.data = &GPS_DATA;
   record_struct.gps.mutex = &global_position_mutex;
 
 
   //gps
-  gps_set_struct.global_pos = &global_position;
+  gps_set_struct.global_pos = &GPS_DATA;
   //Não é necessário que seja um pointer, pois os itens da estrutura já são.
   gps_set_struct.record_cond = record_cond;
   pthread_mutex_init(&global_position_mutex, NULL);
@@ -99,7 +99,7 @@ void init(){
   strcpy(blocker_tracker_s.file_path,"route.txt");
   blocker_tracker_s.enable = 1;
   blocker_tracker_s.mutex_globals_pos = &global_position_mutex;
-  blocker_tracker_s.global_pos = &global_position;
+  blocker_tracker_s.global_pos = &GPS_DATA;
   blocker_tracker_s.expected_signals = malloc(sizeof(sigset_t));
   sigemptyset(blocker_tracker_s.expected_signals);
   sigaddset(blocker_tracker_s.expected_signals, SIGBLK);
@@ -108,7 +108,7 @@ void init(){
   strcpy(blocker_s.file_path,"route.txt");
   blocker_s.enable = 1;
   blocker_s.mutex_globals_pos = &global_position_mutex;
-  blocker_s.global_pos = &global_position;
+  blocker_s.global_pos = &GPS_DATA;
   blocker_s.expected_signals = malloc(sizeof(sigset_t));
   sigemptyset(blocker_s.expected_signals);
   sigaddset(blocker_s.expected_signals, SIGTOL);
@@ -116,7 +116,7 @@ void init(){
 
   //reducer
   reducer_s.reduction = 5;
-  reducer_s.speed_limit = speed_limit;
+  reducer_s.speed_limit = SPEED_LIMIT;
   reducer_s.control_enable.enable = malloc(sizeof(int));
   *(reducer_s.control_enable.enable) = 0; //Inicia-se desativado
   reducer_s.control_enable.mutex = malloc(sizeof(pthread_mutex_t));

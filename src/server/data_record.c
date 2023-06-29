@@ -123,7 +123,7 @@ int main() {
   dl.position.height = 4.643543;
 
   dl.max_speed = 66;
-  dl.instant_speed = 664;
+  dl.INST_SPEED = 664;
 
   printf("linhas: %d", fs.line_count);
 

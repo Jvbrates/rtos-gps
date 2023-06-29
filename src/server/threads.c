@@ -60,7 +60,7 @@ void *data_record_thread(void *structure){
 
     pthread_mutex_lock(arg->instant_speed.mutex);
       get_speed((arg->instant_speed.data));
-      //Tudo isso para manter instant_speed abaixo de max_speed
+      //Tudo isso para manter INST_SPEED abaixo de max_speed
      dl.instant_speed = (*(arg->instant_speed.data) -
                           (int)(*(arg->instant_speed.data))) +
                          ((int)(*(arg->instant_speed.data)) % (int)dl.max_speed);

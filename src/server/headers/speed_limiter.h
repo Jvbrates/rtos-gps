@@ -5,7 +5,7 @@
 #ifndef RTOS_GPS_VELOCITY_LIMITER_H
 #define RTOS_GPS_VELOCITY_LIMITER_H
 #include <pthread.h>
-#define FILE_SIM_sl "speed_limit.simulacrum"
+#define FILE_SIM_sl "SPEED_LIMIT.simulacrum"
 
 typedef double speed;
 
