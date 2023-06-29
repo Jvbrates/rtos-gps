@@ -20,9 +20,10 @@ int data_record(file_stat *fs, data_line write_data){
     pthread_mutex_t *mutex = fs->mutex;
     FILE * fpointer = fopen(fs->file_path, "a");
 
-    if(!fpointer)
+    if(!fpointer) {
+      printf("Erro na manipulação de arquivos\n");
       return 0xF17E;
-
+    }
     printf("Escrevendooooooo\n");
     int r = fprintf(fpointer, "%lf,%lf,%lf,%d,%d,%lf,%lf\n",
             write_data.position.t_lat,
@@ -35,9 +36,10 @@ int data_record(file_stat *fs, data_line write_data){
 
     fclose(fpointer);
 
-    if(r < 0)
+    if(r < 0) {
+      printf("Erro na manipulação de arquivos\n");
       return 0xF17E;
-
+    }
 
     /* After write increment the number of lines, this prevents race conditions
      * with read function (the read operation is limited by num of lines)*/
@@ -70,8 +72,10 @@ int data_iterate_lines(file_stat fs, int line_start, int line_end,
 
     fpoiter = fopen(fs.file_path, "r");
 
-    if(!fpoiter || fs.line_count < line_end || line_start > line_end)
+    if(!fpoiter || fs.line_count < line_end || line_start > line_end) {
+      printf("Erro na manipulação de arquivos\n");
       return 0xF17E;
+    }
 
     fseek(fpoiter, (fs.line_size)*line_start, SEEK_SET);
 

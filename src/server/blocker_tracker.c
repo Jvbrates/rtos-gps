@@ -17,8 +17,10 @@ int on_route(char file_path[250], gpgga_t_simplified position){
 
   FILE * file = fopen(file_path, "r");
 
-  if(!file)
+  if(!file) {
+    printf("Erro ao abrir arquivo\n");
     return 0xF17E;
+  }
 
   position_ray pr_read;
   while ( // Enquanto ainda houver arquivo para ser lido
@@ -53,9 +55,10 @@ int create_file(){
 
   FILE * file = fopen("route.txt", "w");
 
-  if(!file)
+  if(!file) {
+      printf("Erro na manipulação de arquivos\n");
       return 0xF17E;
-
+  }
 
   //fwrite(&pr, sizeof(position_ray), 1, file);
   fprintf(file, "%lf,%lf,%lf\n", pr.longitude,pr.latitude,pr.ray);

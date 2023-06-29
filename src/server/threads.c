@@ -97,12 +97,15 @@ void *blocker_tracker_thread(void *structure){
     pthread_mutex_unlock(arg->mutex_globals_pos);
 
     //Caso esteja fora de rota
-    if (on_route(arg->file_path, local_copy) != 1){
-      printf("Fora de rota\n");
-          own_timer_set(&arg->timer);
-    }else
+    int ver = on_route(arg->file_path, local_copy);
+    if ( ver == 1){
       printf("Em rota\n");
-
+    }else if( ver == 0xF17E) {
+      printf("Impossível definir rota");
+    } else {
+      printf("Fora de rota\n");
+      own_timer_set(&arg->timer);
+    }
   }
 
   pthread_exit(NULL);
@@ -127,7 +130,7 @@ void *blocker_thread(void *structure){
       //Desativa verificação blocker_tracker
       //FIXME como valores enables serão lido e escritos por mais de uma thread
       //quem sabe deveriam também ter seus mutexes
-      arg->enable = 0;
+      //arg->enable = 0;
 
       //Ativa  reduce speed
       set_enable(arg->reducer, 1);
@@ -144,33 +147,31 @@ void *reducer_thread(void *structure) {
   //decode
   reducer_thread_arg *arg = (reducer_thread_arg *)structure;
 
+  while (1) {
 
+    wait_enable_dec(arg->control_enable); // Só precisa ser ativado uma vez
 
-  while (1){
+    while (1) {
 
-    wait_enable_dec(arg->control_enable);
+      own_timer_set(&(arg->timer));
+      int sig;
+      sigwait(arg->expected_signals, &sig);
 
-    own_timer_set(&(arg->timer));
-    int sig;
-    sigwait(arg->expected_signals,  &sig);
+      // Executa o procedimento
 
-    //Executa o procedimento
+      get_speed_limit(&(arg->speed_limit));
 
-    get_speed_limit(&(arg->speed_limit));
+      if (*(arg->speed_limit.data) >= 0) {
+        speed new_limit = *(arg->speed_limit.data) - arg->reduction;
+        speed_struct_t speedStruct = {&new_limit, arg->speed_limit.mutex
 
-
-    if(*(arg->speed_limit.data) >=0) {
-      speed new_limit = *(arg->speed_limit.data) - arg->reduction;
-      speed_struct_t speedStruct = {
-          &new_limit,
-          arg->speed_limit.mutex
-
-      };
-      set_speed_limit(speedStruct);
-    } else {
-      //Disable self
-      set_enable(arg->control_enable, 0);
+        };
+        set_speed_limit(speedStruct);
+      } else {
+        // Disable self
+        set_enable(arg->control_enable, 0);
+        break;
+      }
     }
   }
-
 }
