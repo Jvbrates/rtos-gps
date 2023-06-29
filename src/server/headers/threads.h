@@ -46,16 +46,30 @@ typedef struct {
   pthread_mutex_t *mutex_globals_pos;
   sigset_t *expected_signals;
   loop_control enable;
+  timer_control timer;
+
 } blocker_tracker_thread_arg;
+
 
 typedef struct {
   char file_path[250];
   gpgga_t_simplified *global_pos;
   pthread_mutex_t *mutex_globals_pos;
   sigset_t *expected_signals;
+  loop_control enable;
+  struct triple_cond reducer;
+  timer_control timer;
+
+} blocker_thread_arg;
+
+
+typedef struct {
+
+  sigset_t *expected_signals;
   triple_cond_t control_enable;
   speed_struct_t speed_limit;
   speed reduction;
+  timer_control timer;
 
 } reducer_thread_arg;
 

@@ -35,7 +35,11 @@ pthread_mutex_t  global_position_mutex;
 gps_set_thread_arg gps_set_struct;
 
 //Blocker Tracker
-blocker_tracker_thread_arg blocker_tracker_s, blocker_s;
+blocker_tracker_thread_arg blocker_tracker_s;
+blocker_thread_arg  blocker_s;
+
+//Reducer
+reducer_thread_arg reducer_s;
 
 //speed_limit
 speed_struct_t speed_limit;
@@ -43,18 +47,23 @@ speed_struct_t speed_limit;
 speed_struct_t instant_speed;
 
 void init(){
+
+  //Speed Limit
   speed_limit.data = malloc(sizeof(double ));
   *(speed_limit.data) = 50;
   speed_limit.mutex = malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(speed_limit.mutex, NULL);
 
+  //Instant Speed
   instant_speed.data = malloc(sizeof(double ));
   instant_speed.mutex = malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(instant_speed.mutex, NULL);
 
+
+  //file record
   fs_record.mutex = malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(fs_record.mutex, NULL);
-  strcpy(fs_record.file_path, "../../record.csv");
+  strcpy(fs_record.file_path, "record.csv");
   fs_record.line_count = 0;
   fs_record.line_size = 800;
 
@@ -105,6 +114,21 @@ void init(){
   sigaddset(blocker_s.expected_signals, SIGTOL);
 
 
+  //reducer
+  reducer_s.reduction = 5;
+  reducer_s.speed_limit = speed_limit;
+  reducer_s.control_enable.enable = malloc(sizeof(int));
+  *(reducer_s.control_enable.enable) = 0; //Inicia-se desativado
+  reducer_s.control_enable.mutex = malloc(sizeof(pthread_mutex_t));
+  pthread_mutex_init(reducer_s.control_enable.mutex, NULL);
+  reducer_s.control_enable.cond = malloc(sizeof(pthread_cond_t));
+  pthread_cond_init(reducer_s.control_enable.cond, NULL);
+  reducer_s.expected_signals = malloc(sizeof(sigset_t));
+  sigemptyset(reducer_s.expected_signals);
+  sigaddset(reducer_s.expected_signals, SIGRED);
+
+
+  blocker_s.reducer = reducer_s.control_enable;
 
 }
 
@@ -129,14 +153,19 @@ void init_timers(){
   own_timer_set(&blocker_tracker_timer);
 
   tolerance_timer.sigevent = own_sigevent_create(SIGTOL);
-  tolerance_timer.setup = own_itimerspec(1, 10);
+  tolerance_timer.setup = own_itimerspec(10, 0); //CountDown
   own_timer_create(&tolerance_timer);
   printf("CRIANDO TIMER [%d], mas NÃO ativando\n", SIGTOL);
+  blocker_tracker_s.timer = tolerance_timer;
   //own_timer_set(&tolerance_timer);
 
   reduction_timer.sigevent = own_sigevent_create(SIGRED);
-  reduction_timer.setup = own_itimerspec(1, 10);
+  reduction_timer.setup = own_itimerspec(10, 0); //CountDown
   own_timer_create(&reduction_timer);
+
+  reducer_s.timer = reduction_timer;
+
+
   printf("CRIANDO TIMER [%d], mas NÃO ativando\n", SIGRED);
   //own_timer_set(&tolerance_timer);
 
@@ -160,7 +189,7 @@ int main(){
   //-----------------------------------//
   //-----------[THREADS]----------------//
   pthread_t gps_set_thread_t, record_thread_t,
-  blocker_tracker_thread_t, blocker_thread_t;
+  blocker_tracker_thread_t, blocker_thread_t, reducer_thread_t;
 
   /* É possível que devido ao tempo entre o inicios dos timers e a criação das
    *  threads, alguns sinais sejam perdidos/ignorados.
@@ -174,9 +203,9 @@ int main(){
 
   pthread_create(&blocker_tracker_thread_t, NULL, &blocker_tracker_thread, &blocker_tracker_s);
 
-  //pthread_create(&blocker_thread_t, NULL, &blocker_thread, &blocker_s);
+  pthread_create(&blocker_thread_t, NULL, &blocker_thread, &blocker_s);
 
-  //pthread_create(&reduce_thread_t, NULL, &reduce_thread, &reduce_s);
+  pthread_create(&reducer_thread_t, NULL, &reducer_thread, &reducer_s);
 
   //TODO: Implementar
   //pthread_create(&connection_thread_t, NULL, &connection_thread, &connection_s);
@@ -201,15 +230,11 @@ int main(){
   printf("[%d]\n\n", a);
 
   sigwait(&debug_set, &a);
-  printf("[%d]\n\n", a);*/
+  printf("[%d]\n\n", a);
+  */
 
   pthread_join(record_thread_t, NULL);
   pthread_join(gps_set_thread_t, NULL);
 
-
-
-
-
   return 0;
-
 }

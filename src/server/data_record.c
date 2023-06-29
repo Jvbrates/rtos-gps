@@ -41,11 +41,7 @@ int data_record(file_stat *fs, data_line write_data){
 
     /* After write increment the number of lines, this prevents race conditions
      * with read function (the read operation is limited by num of lines)*/
-    if(mutex)
-      pthread_mutex_lock(mutex);
-    fs->line_count++;
-    if(mutex)
-      pthread_mutex_unlock(mutex);
+
 
     return 0;
 };

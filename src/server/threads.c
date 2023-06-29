@@ -40,21 +40,9 @@ void *gps_set_thread(void *structure){
 
 
 void *data_record_thread(void *structure){
-
   data_record_thread_arg  *arg = (data_record_thread_arg * )structure;
 
   while(arg->enable){
-
-    //Variável de condição
-/*
-    pthread_mutex_lock(arg->record_cond.mutex);
-    while ( *(arg->record_cond.enable) <= 0){
-      pthread_cond_wait(arg->record_cond.cond, arg->record_cond.mutex);
-    }
-    (*(arg->record_cond.enable))--;
-    pthread_mutex_unlock(arg->record_cond.mutex);
-*/
-
     printf("Data_record: Esperando enable \n\n");
     wait_enable_dec(arg->record_cond);
     printf("Data_record: Passou enable \n\n");
@@ -72,15 +60,17 @@ void *data_record_thread(void *structure){
 
     pthread_mutex_lock(arg->instant_speed.mutex);
       get_speed((arg->instant_speed.data));
-
       //Tudo isso para manter instant_speed abaixo de max_speed
      dl.instant_speed = (*(arg->instant_speed.data) -
                           (int)(*(arg->instant_speed.data))) +
                          ((int)(*(arg->instant_speed.data)) % (int)dl.max_speed);
     pthread_mutex_unlock(arg->instant_speed.mutex);
 
-    //Aqui tambem ocorre mutex lock/unlock
     data_record(arg->fs, dl);
+
+    pthread_mutex_lock(arg->fs->mutex);
+      arg->fs->line_count++;
+    pthread_mutex_unlock(arg->fs->mutex);
 
   }
 
@@ -109,7 +99,7 @@ void *blocker_tracker_thread(void *structure){
     //Caso esteja fora de rota
     if (on_route(arg->file_path, local_copy) != 1){
       printf("Fora de rota\n");
-        //TODO Countdown signal 36
+          own_timer_set(&arg->timer);
     }else
       printf("Em rota\n");
 
@@ -120,7 +110,7 @@ void *blocker_tracker_thread(void *structure){
 
 void *blocker_thread(void *structure){
   //decode
-  blocker_tracker_thread_arg *arg = (blocker_tracker_thread_arg *)structure;
+  blocker_thread_arg *arg = (blocker_tracker_thread_arg *)structure;
 
   //TODO Os enables também poderiam ser implementados com variaveis condicionais
   while (arg->enable){
@@ -139,7 +129,9 @@ void *blocker_thread(void *structure){
       //quem sabe deveriam também ter seus mutexes
       arg->enable = 0;
 
-      //Ativa countdown para reduce speed
+      //Ativa  reduce speed
+      set_enable(arg->reducer, 1);
+      pthread_cond_broadcast(arg->reducer.cond);
     }
 
   }
@@ -156,9 +148,9 @@ void *reducer_thread(void *structure) {
 
   while (1){
 
-    wait_enable(arg->control_enable);
+    wait_enable_dec(arg->control_enable);
 
-    //countdown(signal)
+    own_timer_set(&(arg->timer));
     int sig;
     sigwait(arg->expected_signals,  &sig);
 
