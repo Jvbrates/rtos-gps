@@ -1,5 +1,6 @@
 //
 // Created by jvbrates on 6/21/23.
+// gcc main.c speed_limiter.c  velocimeter.c  timers.c  gps_sensor.c data_record.c threads_aux.c blocker_tracker.c threads.c  -o rtos_gps -lm -Wall -Wextranizer"
 //
 
 #include "headers/gps_sensor.h"
