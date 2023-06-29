@@ -4,8 +4,8 @@
 
 #ifndef RTOS_GPS_DATA_RECORD_H
 #define RTOS_GPS_DATA_RECORD_H
-#include "headers/gps_sensor.h"
-#include "headers/velocimeter.h"
+#include "gps_sensor.h"
+#include "velocimeter.h"
 #include <stdio.h>
 typedef struct {
   char file_path[50];

@@ -3,7 +3,7 @@
 //
 
 #include "headers/velocimeter.h"
-#include "stdio.h"
+#include <stdio.h>
 
 int get_speed(speed *km_h){
   static long int pointer_count;
@@ -11,18 +11,19 @@ int get_speed(speed *km_h){
   FILE  * file_decr;
 
   if((file_decr = fopen(FILE_SIM, "r") )== NULL){
+
     return 0xF17E;
   }
   //-----
   if(pointer_count != 0) {
     fseek(file_decr, pointer_count, SEEK_SET);
-    printf("Update seel %ld\n", pointer_count);
+    //printf("Update seek %ld\n", pointer_count);
   }
 
 
   fscanf(file_decr, "%lf", km_h);
 
-
+  printf("Velocidade lida %lf", *km_h);
 
   if(feof(file_decr))
     pointer_count = 0;

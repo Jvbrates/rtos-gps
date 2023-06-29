@@ -4,7 +4,7 @@
 
 #ifndef RTOS_GPS_VELOCIMETER_H
 #define RTOS_GPS_VELOCIMETER_H
-#define FILE_SIM "./../velocimeter.simulacrum"
+#define FILE_SIM "velocimeter.simulacrum"
 #define SIZE_SIM 50 //Número de velocidades diferentes
 
 typedef double speed;

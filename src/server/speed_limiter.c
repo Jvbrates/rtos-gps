@@ -11,7 +11,7 @@ int get_speed_limit(speed_struct_t *s){
     pthread_mutex_lock(s->mutex);
   FILE * file_decr;
 
-  if((file_decr = fopen(FILE_SIM, "r") )== NULL){
+  if((file_decr = fopen(FILE_SIM_sl, "r") )== NULL){
     return 0xF17E;
   }
 
@@ -27,24 +27,24 @@ int get_speed_limit(speed_struct_t *s){
   return 0;
 }
 
-int set_speed_limit(speed_struct_t *s){
-  if(s->mutex!=NULL)
-    pthread_mutex_lock(s->mutex);
+int set_speed_limit(speed_struct_t s){
+  if(s.mutex!=NULL)
+    pthread_mutex_lock(s.mutex);
 
   FILE  * file_decr;
 
-  if((file_decr = fopen(FILE_SIM, "w") )== NULL){
+  if((file_decr = fopen(FILE_SIM_sl, "w") )== NULL){
     return 0xF17E;
   }
   //-----
 
-  fprintf(file_decr, "%lf", *(s->data));
+  fprintf(file_decr, "%lf", *(s.data));
 
   //-----
   fclose(file_decr);
 
-  if(s->mutex!=NULL)
-    pthread_mutex_unlock(s->mutex);
+  if(s.mutex!=NULL)
+    pthread_mutex_unlock(s.mutex);
 
   return 0;
 }

@@ -5,6 +5,7 @@
 #include "headers/data_record.h"
 #include "headers/gps_sensor.h"
 #include "headers/velocimeter.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -22,6 +23,7 @@ int data_record(file_stat *fs, data_line write_data){
     if(!fpointer)
       return 0xF17E;
 
+    printf("Escrevendooooooo\n");
     int r = fprintf(fpointer, "%lf,%lf,%lf,%d,%d,%lf,%lf\n",
             write_data.position.t_lat,
             write_data.position.t_long,

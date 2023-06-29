@@ -115,7 +115,7 @@ gpgga_t_simplified get_gppga_simplified() {
         lineMsg[posicao] = c;
         posicao++;
         if (c == '\n') {
-          					printf("aa%s\n", lineMsg);
+          //printf("aa%s\n", lineMsg);
           break;
         }
       } else if (res == 0) {
@@ -377,27 +377,10 @@ double haversine_distance(gpgga_t_simplified A, gpgga_t_simplified B){
           );
 }
 
-/*
-
-int main(){
-  gps_struct_t g;
-  g.data = malloc(sizeof(gpgga_t_simplified));
-  g.mutex = NULL;
-
-  
-  
-  int a;
-  
-  do {
-    scanf("%d", &a);
-    gps_set(&g);
-    printf("Latitude: (%f), Longitude: (%f), Qualidade: %d, Altitude: %f\n",
-           g.data->t_lat, g.data->t_long, g.data->quality, g.data->height);
-  }while(a!=0);
 
 
-  return 0;
-}*/
+
+
 
 /*
 int main(){

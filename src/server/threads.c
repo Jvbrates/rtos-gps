@@ -1,85 +1,63 @@
-//
-// Created by jvbrates on 6/23/23.
-//
 #include <pthread.h>
 #include "headers/gps_sensor.h"
+#include "headers/threads.h"
 #include "headers/velocimeter.h"
 #include "headers/speed_limiter.h"
 #include "headers/data_record.h"
 #include "headers/blocker_tracker.h"
+#include "headers/threads_aux.h"
 
 #include "signal.h"
 
-typedef int cond_control;
-typedef int loop_control;
 
 /* TODO Nas gravações de dados no GPS pode-se implementar a mesma ideia de
    leitores-escritor */
 
-typedef struct {
-  gpgga_t_simplified *global_pos;
-  pthread_mutex_t *mutex_globals_pos;
-  pthread_mutex_t *record_mut;
-  pthread_cond_t *record_cond;
-  cond_control *record_req;
-
-  sigset_t *expected_signals;
-
-} gps_set_thread_arg;
 
 
-void gps_set_thread(void *structure){
+void *gps_set_thread(void *structure){
   gps_set_thread_arg * arg = (gps_set_thread_arg *)structure;
 
-  pthread_sigmask(SIG_SETMASK, arg->expected_signals, NULL);
-
-  while (1) { //Maybe add a control variable
+  while (1) { //Always enable
 
     int signal_recv; //To linter no complain
-    sigwait(arg->expected_signals, &signal_recv);
 
+    printf("Esperando o sinal\n\n");
+    sigwait(arg->expected_signals, &signal_recv);
+    printf("Sinal recebbido %d\n\n", signal_recv);
     gps_set(&(gps_struct_t){arg->global_pos, arg->mutex_globals_pos});
 
     // New gps value got, wakeup the data_record_thread
-    pthread_mutex_lock(arg->record_mut);
-      (*(arg->record_req))++;
-    pthread_mutex_unlock(arg->record_mut);
-    pthread_cond_signal(arg->record_cond);
+    pthread_mutex_lock(arg->record_cond.mutex);
+      (*(arg->record_cond.enable))++;
+    pthread_mutex_unlock(arg->record_cond.mutex);
+    pthread_cond_signal(arg->record_cond.cond);
   }
 
   pthread_exit(NULL);
 
 }
 
-typedef struct {
 
-  cond_control *record_req;
-  pthread_mutex_t *record_mut;
-  pthread_cond_t *record_cond;
-
-  file_stat *fs;
-  speed_struct_t speed_limit;
-  speed_struct_t instant_speed;
-  gps_struct_t gps;
-
-  loop_control *enable;
-
-} data_record_thread_arg;
-
-void data_record_thread(void *structure){
+void *data_record_thread(void *structure){
 
   data_record_thread_arg  *arg = (data_record_thread_arg * )structure;
 
   while(arg->enable){
 
     //Variável de condição
-    pthread_mutex_lock(arg->record_mut);
-    while ( *(arg->record_req) <= 0){
-      pthread_cond_wait(arg->record_cond, arg->record_mut);
+/*
+    pthread_mutex_lock(arg->record_cond.mutex);
+    while ( *(arg->record_cond.enable) <= 0){
+      pthread_cond_wait(arg->record_cond.cond, arg->record_cond.mutex);
     }
-    (*(arg->record_req))--;
-    pthread_mutex_unlock(arg->record_mut);
+    (*(arg->record_cond.enable))--;
+    pthread_mutex_unlock(arg->record_cond.mutex);
+*/
 
+    printf("Data_record: Esperando enable \n\n");
+    wait_enable_dec(arg->record_cond);
+    printf("Data_record: Passou enable \n\n");
 
     // Cria a linha que será escrita
     data_line dl;
@@ -93,7 +71,12 @@ void data_record_thread(void *structure){
     pthread_mutex_unlock(arg->speed_limit.mutex);
 
     pthread_mutex_lock(arg->instant_speed.mutex);
-    dl.instant_speed = *(arg->instant_speed.data);
+      get_speed((arg->instant_speed.data));
+
+      //Tudo isso para manter instant_speed abaixo de max_speed
+     dl.instant_speed = (*(arg->instant_speed.data) -
+                          (int)(*(arg->instant_speed.data))) +
+                         ((int)(*(arg->instant_speed.data)) % (int)dl.max_speed);
     pthread_mutex_unlock(arg->instant_speed.mutex);
 
     //Aqui tambem ocorre mutex lock/unlock
@@ -105,25 +88,19 @@ void data_record_thread(void *structure){
 
 }
 
-typedef struct {
-  char file_path[250];
-  gpgga_t_simplified *global_pos;
-  pthread_mutex_t *mutex_globals_pos;
-  sigset_t *expected_signals;
-  loop_control enable;
-} blocker_tracker_thread_arg;
 
-// TODO BLOCK_TRACKER_THREAD  fazer TRACKER com variavel de condição
 
-void blocker_tracker_thread(void *structure){
+void *blocker_tracker_thread(void *structure){
   //decode
   blocker_tracker_thread_arg *arg = (blocker_tracker_thread_arg *)structure;
 
-  //TODO Os enables também poderiam ser implementados com variaveis condicionais
+  //FIXME:O enable também poderiam ser implementados com variaveis condicionais
   while (arg->enable){
 
     int signal_recv; //To linter no complain
+    printf("Esperando o sinal\n");
     sigwait(arg->expected_signals, &signal_recv);
+    printf("Sinal recebido por blocker_tracker [%d]\n", signal_recv);
 
     pthread_mutex_lock(arg->mutex_globals_pos);
       gpgga_t_simplified local_copy = *(arg->global_pos);
@@ -131,15 +108,17 @@ void blocker_tracker_thread(void *structure){
 
     //Caso esteja fora de rota
     if (on_route(arg->file_path, local_copy) != 1){
-        //Countdown signal 36
-    }
+      printf("Fora de rota\n");
+        //TODO Countdown signal 36
+    }else
+      printf("Em rota\n");
 
   }
 
   pthread_exit(NULL);
 }
 
-void blocker_thread(void *structure){
+void *blocker_thread(void *structure){
   //decode
   blocker_tracker_thread_arg *arg = (blocker_tracker_thread_arg *)structure;
 
@@ -166,4 +145,40 @@ void blocker_thread(void *structure){
   }
 
   pthread_exit(NULL);
+}
+
+
+void *reducer_thread(void *structure) {
+  //decode
+  reducer_thread_arg *arg = (reducer_thread_arg *)structure;
+
+
+
+  while (1){
+
+    wait_enable(arg->control_enable);
+
+    //countdown(signal)
+    int sig;
+    sigwait(arg->expected_signals,  &sig);
+
+    //Executa o procedimento
+
+    get_speed_limit(&(arg->speed_limit));
+
+
+    if(*(arg->speed_limit.data) >=0) {
+      speed new_limit = *(arg->speed_limit.data) - arg->reduction;
+      speed_struct_t speedStruct = {
+          &new_limit,
+          arg->speed_limit.mutex
+
+      };
+      set_speed_limit(speedStruct);
+    } else {
+      //Disable self
+      set_enable(arg->control_enable, 0);
+    }
+  }
+
 }
