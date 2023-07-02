@@ -1,1 +1,0 @@
-/* Interpretador dos comandos enviados pelo cliente*/
