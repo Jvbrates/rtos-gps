@@ -74,7 +74,6 @@ gpgga_t_simplified get_gppga_simplified() {
   memset(&options, 0, sizeof(options));
 
   if (tcgetattr(device, &options) != 0) {
-    printf("Dispositivo GPS usb nao responde para obter informacoes da serial!");
     return (gpgga_t_simplified){0,0,0,0,0,};
   }
 
@@ -100,7 +99,10 @@ gpgga_t_simplified get_gppga_simplified() {
   options.c_cflag &= ~CRTSCTS;
 
   if (tcsetattr(device, TCSANOW, &options) != 0) {
-    printf("Dispositivo GPS usb nao responde para obter informacoes da serial!");
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    printf("Dispositivo GPS usb nao responde para obter informacoes da serial!\n");
+    printf("now: %d-%02d-%02d %02d:%02d:%02d\n", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     return (gpgga_t_simplified){0,0,0,0,0,};
   }
 

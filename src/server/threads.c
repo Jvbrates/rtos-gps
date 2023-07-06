@@ -1,4 +1,7 @@
 #include <pthread.h>
+#include <signal.h>
+#include <stdlib.h>
+
 #include "headers/gps_sensor.h"
 #include "headers/threads.h"
 #include "headers/velocimeter.h"
@@ -6,13 +9,6 @@
 #include "headers/data_record.h"
 #include "headers/blocker_tracker.h"
 #include "headers/threads_aux.h"
-
-#include "signal.h"
-
-
-/* TODO Nas gravações de dados no GPS pode-se implementar a mesma ideia de
-   leitores-escritor */
-
 
 
 void *gps_set_thread(void *structure){
@@ -24,13 +20,13 @@ void *gps_set_thread(void *structure){
 
     printf("Esperando o sinal\n\n");
     sigwait(arg->expected_signals, &signal_recv);
-    printf("Sinal recebbido %d\n\n", signal_recv);
+    char *c = time_now();
+    printf("Sinal recebido por gps_set [%d] (%s)\n", signal_recv, c);
+    free(c);
     gps_set(&(gps_struct_t){arg->global_pos, arg->mutex_globals_pos});
 
-    // New gps value got, wakeup the data_record_thread
-    pthread_mutex_lock(arg->record_cond.mutex);
-      (*(arg->record_cond.enable))++;
-    pthread_mutex_unlock(arg->record_cond.mutex);
+    //Set and Wake up data_record
+    set_enable(arg->record_cond, 1);
     pthread_cond_signal(arg->record_cond.cond);
   }
 
@@ -43,9 +39,9 @@ void *data_record_thread(void *structure){
   data_record_thread_arg  *arg = (data_record_thread_arg * )structure;
 
   while(arg->enable){
-    printf("Data_record: Esperando enable \n\n");
+    printf("Data_record: Esperando enable de gps_read \n\n");
     wait_enable_dec(arg->record_cond);
-    printf("Data_record: Passou enable \n\n");
+    printf("Data_record: Passou enable de gps_read\n\n");
 
     // Cria a linha que será escrita
     data_line dl;
@@ -90,7 +86,10 @@ void *blocker_tracker_thread(void *structure){
     int signal_recv; //To linter no complain
     printf("Esperando o sinal\n");
     sigwait(arg->expected_signals, &signal_recv);
-    printf("Sinal recebido por blocker_tracker [%d]\n", signal_recv);
+    char *c = time_now();
+    printf("Sinal recebido por blocker_tracker [%d] (%s)\n", signal_recv, c);
+    free(c);
+
 
     pthread_mutex_lock(arg->mutex_globals_pos);
       gpgga_t_simplified local_copy = *(arg->global_pos);
@@ -113,13 +112,16 @@ void *blocker_tracker_thread(void *structure){
 
 void *blocker_thread(void *structure){
   //decode
-  blocker_thread_arg *arg = (blocker_tracker_thread_arg *)structure;
+  blocker_thread_arg *arg = (blocker_thread_arg *)structure;
 
   //TODO Os enables também poderiam ser implementados com variaveis condicionais
   while (arg->enable){
 
     int signal_recv; //To linter no complain
     sigwait(arg->expected_signals, &signal_recv);
+    char *c = time_now();
+    printf("Sinal recebido por blocker [%d] (%s)\n", signal_recv, c);
+    free(c);
 
     pthread_mutex_lock(arg->mutex_globals_pos);
     gpgga_t_simplified local_copy = *(arg->global_pos);
@@ -156,6 +158,9 @@ void *reducer_thread(void *structure) {
       own_timer_set(&(arg->timer));
       int sig;
       sigwait(arg->expected_signals, &sig);
+      char *c = time_now();
+      printf("Sinal recebido por reducer [%d] (%s)\n", sig, c);
+      free(c);
 
       // Executa o procedimento
 

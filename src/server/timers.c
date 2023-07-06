@@ -17,12 +17,12 @@ sigevent_t * own_sigevent_create(int SIGNAL){
   return sigevent;
 }
 
-void own_timer_create(timer_control *tc){
-  timer_create(CLOCK_MONOTONIC, tc->sigevent, &(tc->t_id));
+int own_timer_create(timer_control *tc){
+  return timer_create(CLOCK_MONOTONIC, tc->sigevent, &(tc->t_id));
 }
 
-void own_timer_set(timer_control *tc){
-  timer_settime(tc->t_id, 0, (tc->setup), NULL);
+int own_timer_set(timer_control *tc){
+  return timer_settime(tc->t_id, 0, (tc->setup), NULL);
 }
 
 struct itimerspec * own_itimerspec(int val_sec, int iterv_sec){

@@ -19,4 +19,6 @@ void wait_enable_dec(triple_cond_t control);
 
 void set_enable(triple_cond_t control, int setval);
 
+char *time_now();
+
 #endif // RTOS_GPS_THREADS_AUX_H

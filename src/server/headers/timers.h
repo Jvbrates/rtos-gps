@@ -16,9 +16,9 @@ typedef struct timer_control_s {
 
 sigevent_t * own_sigevent_create(int SIGNAL);
 
-void own_timer_create(timer_control *tc);
+int own_timer_create(timer_control *tc);
 
-void own_timer_set(timer_control *tc);
+int own_timer_set(timer_control *tc);
 
 struct itimerspec * own_itimerspec(int val_sec, int iterv_sec);
 

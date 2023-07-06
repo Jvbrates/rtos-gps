@@ -9,6 +9,7 @@
 #include "headers/threads.h"
 #include "headers/threads_aux.h"
 #include "headers/timers.h"
+#include "headers/command_control.h"
 
 #include <pthread.h>
 #include <string.h>
@@ -17,9 +18,9 @@
 #include <signal.h>
 
 #define SIGGPS SIGRTMIN   //gps_timer
-#define SIGBLK SIGRTMIN+1 //blocker_tracker_timer
-#define SIGTOL SIGRTMIN+2 //tolerance_timer
-#define SIGRED SIGRTMIN+3 //reduction_timer
+#define SIGBLK (SIGRTMIN+1) //blocker_tracker_timer
+#define SIGTOL (SIGRTMIN+2) //tolerance_timer
+#define SIGRED (SIGRTMIN+3) //reduction_timer
 
 
 //Globals
@@ -232,6 +233,16 @@ int main(){
   sigwait(&debug_set, &a);
   printf("[%d]\n\n", a);
   */
+
+  command_control_arg cc_debug;
+
+  cc_debug.gps.gps_timer = gps_timer;
+
+  print_cc_control(cc_debug);
+
+  connection(&cc_debug);
+
+  print_cc_control(cc_debug);
 
   pthread_join(record_thread_t, NULL);
   pthread_join(gps_set_thread_t, NULL);

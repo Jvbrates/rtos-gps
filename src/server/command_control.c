@@ -1,7 +1,10 @@
-#include <netinet/in.h>
+#include "headers/timers.h"
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "headers/command_control.h"
 
 #ifndef PORT_LISTEN
   #define PORT_LISTEN 50012
@@ -15,7 +18,6 @@
  * Usarei os comandos específico para socket (netinet) para manter o padrao
  * Isto é, send, recv e shutdown ao inves de write, read e close*/
 
-typedef struct arg_set{char* arguments[5]}  arg_set;
 
 arg_set parse(char *input){
   arg_set arg = {0};
@@ -31,9 +33,13 @@ arg_set parse(char *input){
   return arg;
 }
 
-void command_control(void *arg, char response[BUFFER_SIZE]);
+void print_cc_control(command_control_arg arg){
+  printf("------------------------------------\n");
+  printf( "%d, %d, %d\n",arg.gps.gps_timer.t_id,arg.gps.gps_timer.setup->it_interval.tv_sec, arg.gps.gps_timer.setup->it_interval.tv_nsec);
+  printf("------------------------------------\n");
+}
 
-_Noreturn void connection(void *arg) {
+void connection(void *arg) {
   struct sockaddr_in serv_addr, cli_addr;
   socklen_t clilen;
   int sockfd, errno;
@@ -73,17 +79,26 @@ _Noreturn void connection(void *arg) {
 
   while (1) {
 
+    memset(buffer, 0, BUFFER_SIZE);
     errno = recv(connected_socket, buffer, sizeof(buffer), 0);
+
+    if(!strcmp(buffer, "sair")){
+      printf("Conexão fechada por commando \"sair\".");
+      shutdown(connected_socket, SHUT_RDWR);
+
+      break;
+    }
 
     if (errno <= 0) {
       printf("Erro recebendo do socket, fechando conexão");
       shutdown(connected_socket, SHUT_RDWR);
+      break;
     }
     printf("Recebeu: %s - %lu\n", buffer, strlen(buffer));
     // Aqui o tratamento do comando
 
     arg_set argumentos = parse(buffer);
-    //command_control(arg, argumentos);
+    command_control(arg, buffer, argumentos);
 
     errno = send(connected_socket, buffer, sizeof(buffer), 0);
 
@@ -94,19 +109,78 @@ _Noreturn void connection(void *arg) {
   }
 }
 
+typedef enum {undefined, GPS, load_route, record, locker} opcode;
 
-int main(){
+opcode switch_aux(char* op){
+   if(!strcmp("record", op))
+    return record;
+   if(!strcmp("GPS", op))
+    return GPS;
+   if(!strcmp("load_route", op))
+    return load_route;
+   if(!strcmp("locker", op))
+    return locker;
+   return undefined;
+}
 
-   //connection(NULL);
 
-  char a[] = {"locker config 123 433 11"};
- /* Isto é diferente pois aloca o ponteiro na heap (ok), entretanto a string é
+void gps_control(struct command_gps c_gps, arg_set parsed, char response[BUFFER_SIZE]){
+    if(!strcmp(parsed.arguments[1], "read_invterval")){
+      c_gps.gps_timer.setup->it_interval.tv_sec = atoi(parsed.arguments[2]);
+      own_timer_set(&c_gps.gps_timer);
+
+      char * tmp = malloc(150);
+
+      sprintf(tmp, "GPS read interval set to %ld",
+              c_gps.gps_timer.setup->it_interval.tv_sec);
+
+      strcpy(response, tmp);
+
+      free(tmp);
+
+    }else {
+      strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | GPS ???");
+    }
+
+};
+
+void command_control(void *arg, char response[BUFFER_SIZE], arg_set parsed){
+
+   command_control_arg *cc_arg = (command_control_arg *)(arg);
+
+
+
+   switch (switch_aux(parsed.arguments[0])) {
+
+   case undefined:
+    strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED");
+    break;
+   case GPS:
+    gps_control(cc_arg->gps, parsed, response);
+    break;
+   case load_route:
+    break;
+   case record:
+    break;
+   case locker:
+    break;
+   }
+
+}
+
+
+int maint(){
+
+   connection(NULL);
+
+   //char a[] = {"locker config 123 433 11"};
+   /* Isto é diferente pois aloca o ponteiro na heap (ok), entretanto a string é
  * alocada em outro lugar (não especificado por C99), mas que geralmente seria
  * .static e tratada como uma constate, por isso tentar alterar a string causa
  * SISEGV
- */
-  //char *a= {"locker config 123 433 11"};
-  arg_set saida = parse(a);
+    */
+   //char *a= {"locker config 123 433 11"};
+   //arg_set saida = parse(a);
 
 
    return 0;
