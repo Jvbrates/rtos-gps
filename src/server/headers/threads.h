@@ -29,6 +29,7 @@ typedef struct {
 } gps_set_thread_arg;
 
 typedef struct {
+  triple_cond_t enable_cond;
   triple_cond_t record_cond;
 
   file_stat *fs;
@@ -47,6 +48,7 @@ typedef struct {
   sigset_t *expected_signals;
   loop_control enable;
   timer_control timer;
+  triple_cond_t enable_cond;
 
 } blocker_tracker_thread_arg;
 
@@ -83,7 +85,7 @@ void *blocker_tracker_thread(void *structure);
 
 void *blocker_thread(void *structure);
 
-void *reducer_thread(void *structure);
+_Noreturn void *reducer_thread(void *structure);
 
 
 #endif // RTOS_GPS_THREADS_H

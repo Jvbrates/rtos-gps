@@ -125,7 +125,7 @@ opcode switch_aux(char* op){
 
 
 void gps_control(struct command_gps c_gps, arg_set parsed, char response[BUFFER_SIZE]){
-    if(!strcmp(parsed.arguments[1], "read_invterval")){
+    if(!strcmp(parsed.arguments[1], "read_interval")){
       c_gps.gps_timer.setup->it_interval.tv_sec = atoi(parsed.arguments[2]);
       own_timer_set(&c_gps.gps_timer);
 
@@ -144,11 +144,122 @@ void gps_control(struct command_gps c_gps, arg_set parsed, char response[BUFFER_
 
 };
 
+int cond_set(char *str, triple_cond_t cond){
+    if(!strcmp(str, "enable")){
+      set_enable(cond, 1);
+    } else if (!strcmp(str, "disable")) {
+      set_enable(cond, 1);
+    } else {
+      return  -1;
+    }
+
+    return 0;
+}
+
+void record_control(struct command_record c_rec, arg_set parsed, char response[BUFFER_SIZE]){
+    if(!strcmp(parsed.arguments[1], "set")){
+      if(!cond_set(parsed.arguments[2], c_rec.enable)){
+        pthread_cond_broadcast(c_rec.enable.cond);
+        char * c = (char *)malloc(100);
+        sprintf(c, "record set %s", parsed.arguments[2]);
+        strcpy(response, c);
+        free(c);
+      } else {
+        strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | record set ???");
+      }
+    } else if (!strcmp(parsed.arguments[1], "get")){
+      strcpy(response, "IMplement it \"get\"!");
+    } else if (!strcmp(parsed.arguments[1], "snapshot")){
+        //Set and Wake up data_record
+        set_enable(c_rec.snapshot, 1);
+        pthread_cond_broadcast(c_rec.snapshot.cond);
+        strcpy(response, "signal sended to snapshot");
+    } else {
+      strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | record ???");
+    }
+}
+
+void locker_control(struct command_locker c_loc, arg_set parsed, char response[BUFFER_SIZE]){
+    if(!strcmp(parsed.arguments[1], "set")){
+      if(!cond_set(parsed.arguments[2], c_loc.enable)){
+        pthread_cond_broadcast(c_loc.enable.cond);
+        char * c = (char *)malloc(100);
+        sprintf(c, "locker set %s", parsed.arguments[2]);
+        strcpy(response, c);
+        free(c);
+      } else {
+        strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | locker set ???");
+      }
+    } else if (!strcmp(parsed.arguments[1], "config")){
+      strcpy(response, "Implement it! \"config\" v");
+    } else {
+      strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | locker ???");
+    }
+}
+
+void load_route_control(struct command_load_route c_lr, arg_set parsed, char response[BUFFER_SIZE]){
+    if(!strcmp(parsed.arguments[1], "open")){
+      if(c_lr.fdesc){
+        strcpy(response, "file already open");
+      } else {
+        c_lr.fdesc = fopen("tmploadfile.csv", "w");
+        char *c = malloc(200);
+        sprintf(c, "File opened [%p]", c_lr.fdesc);
+        strcpy(response, c);
+        free(c);
+      }
+    }
+    else if(!strcmp(parsed.arguments[1], "close")){
+      if(c_lr.fdesc){
+        int r  = fclose(c_lr.fdesc);
+        char *c = malloc(200);
+        sprintf(c, "File closed [%i].",r);
+        strcpy(response, c);
+        free(c);
+      } else {
+        strcpy(response, "There is not file opened.");
+      }
+    }
+    else if(!strcmp(parsed.arguments[1], "write")){
+
+      char *d;
+      int r = fprintf(c_lr.fdesc, "%Lf,%Lf,%Lf",
+                      strtold(parsed.arguments[2], &d),
+                      strtold(parsed.arguments[3], &d),
+                      strtold(parsed.arguments[4], &d));
+
+      if(r < 0){
+        char *c = malloc(200);
+        sprintf(c, "Error on write [%d].", r);
+        strcpy(response, c);
+        free(c);
+      } else {
+        strcpy(response, "Successfully wrote");
+      }
+
+
+
+    }
+    else if(!strcmp(parsed.arguments[1], "commit")){
+        if(c_lr.fdesc){
+          strcpy(response, "Close the file before commit.");
+        } else {
+          int r = rename("tmploadfile.csv", "route.csv");
+
+          if(!r){
+            strcpy(response, "Successfully commited.");
+          } else {
+            strcpy(response, "Failure on rename()");
+          }
+        }
+    } else {
+      strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | load_route ???");
+    }
+}
+
 void command_control(void *arg, char response[BUFFER_SIZE], arg_set parsed){
 
    command_control_arg *cc_arg = (command_control_arg *)(arg);
-
-
 
    switch (switch_aux(parsed.arguments[0])) {
 
@@ -161,8 +272,10 @@ void command_control(void *arg, char response[BUFFER_SIZE], arg_set parsed){
    case load_route:
     break;
    case record:
+    record_control(cc_arg->record, parsed, response);
     break;
    case locker:
+    locker_control(cc_arg->locker, parsed, response);
     break;
    }
 

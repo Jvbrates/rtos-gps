@@ -38,10 +38,15 @@ void *gps_set_thread(void *structure){
 void *data_record_thread(void *structure){
   data_record_thread_arg  *arg = (data_record_thread_arg * )structure;
 
-  while(arg->enable){
-    printf("Data_record: Esperando enable de gps_read \n\n");
+  while(1){
+
+    printf("Data_record: Esperando enable por comando\n\n");
+    wait_enable(arg->enable_cond);
+    printf("Data_record: Passou enable por comando\n\n");
+
+    printf("Data_record: Esperando enable de gps_read|snapshot \n\n");
     wait_enable_dec(arg->record_cond);
-    printf("Data_record: Passou enable de gps_read\n\n");
+    printf("Data_record: Passou enable de gps_read|snapshot\n\n");
 
     // Cria a linha que será escrita
     data_line dl;
@@ -74,14 +79,16 @@ void *data_record_thread(void *structure){
 
 }
 
-
-
 void *blocker_tracker_thread(void *structure){
   //decode
   blocker_tracker_thread_arg *arg = (blocker_tracker_thread_arg *)structure;
 
-  //FIXME:O enable também poderiam ser implementados com variaveis condicionais
-  while (arg->enable){
+
+  while (1){
+
+    printf("locker: Esperando enable por comando\n\n");
+    wait_enable(arg->enable_cond);
+    printf("locker: Recebeu enable por comando\n\n");
 
     int signal_recv; //To linter no complain
     printf("Esperando o sinal\n");
@@ -144,8 +151,7 @@ void *blocker_thread(void *structure){
   pthread_exit(NULL);
 }
 
-
-void *reducer_thread(void *structure) {
+_Noreturn void *reducer_thread(void *structure) {
   //decode
   reducer_thread_arg *arg = (reducer_thread_arg *)structure;
 

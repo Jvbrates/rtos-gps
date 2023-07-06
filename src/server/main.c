@@ -26,6 +26,7 @@
 //Globals
 //Record
 triple_cond_t record_cond;
+triple_cond_t record_enable;
 data_record_thread_arg record_struct;
 file_stat fs_record;
 
@@ -36,6 +37,7 @@ pthread_mutex_t  global_position_mutex;
 gps_set_thread_arg gps_set_struct;
 
 //Blocker Tracker
+triple_cond_t  blocker_enable;
 blocker_tracker_thread_arg blocker_tracker_s;
 blocker_thread_arg  blocker_s;
 
@@ -70,13 +72,24 @@ void init(){
 
 
   // Record
+  // record_cond
   record_cond.mutex = malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(record_cond.mutex, NULL);
   record_cond.enable = malloc(sizeof (int));
   *(record_cond.enable) = 0;
   record_cond.cond = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(record_cond.cond, NULL);
+  //record_enable
+  record_enable.mutex = malloc(sizeof(pthread_mutex_t));
+  pthread_mutex_init(record_enable.mutex, NULL);
+  record_enable.enable = malloc(sizeof (int));
+  *(record_enable.enable) = 0; //Default Enable | FIXME
+  record_enable.cond = malloc(sizeof(pthread_cond_t));
+  pthread_cond_init(record_enable.cond, NULL);
+
+  record_struct.enable_cond = record_enable;
   record_struct.record_cond = record_cond;
+
   record_struct.enable = malloc(sizeof (int));
   *(record_struct.enable) = 1;
   record_struct.instant_speed = INST_SPEED;
@@ -104,6 +117,15 @@ void init(){
   blocker_tracker_s.expected_signals = malloc(sizeof(sigset_t));
   sigemptyset(blocker_tracker_s.expected_signals);
   sigaddset(blocker_tracker_s.expected_signals, SIGBLK);
+  //blocker tracer enable
+  //record_enable
+  blocker_enable.mutex = malloc(sizeof(pthread_mutex_t));
+  pthread_mutex_init(blocker_enable.mutex, NULL);
+  blocker_enable.enable = malloc(sizeof (int));
+  *(blocker_enable.enable) = 0; //Default Enable | FIXME
+  blocker_enable.cond = malloc(sizeof(pthread_cond_t));
+  pthread_cond_init(blocker_enable.cond, NULL);
+  blocker_tracker_s.enable_cond = blocker_enable;
 
   //blocker
   strcpy(blocker_s.file_path,"route.txt");
@@ -237,6 +259,9 @@ int main(){
   command_control_arg cc_debug;
 
   cc_debug.gps.gps_timer = gps_timer;
+  cc_debug.record.enable = record_enable;
+  cc_debug.locker.enable = blocker_enable;
+  cc_debug.record.snapshot = record_cond;
 
   print_cc_control(cc_debug);
 
