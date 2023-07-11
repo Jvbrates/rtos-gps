@@ -6,4 +6,4 @@ LIBS=-lm \
      -lrt
 
 server:
-	$(CC) -o server $(C_SOURCE) $(LIBS) $(CC_FLAGS)
+	$(CC) -o server.out $(C_SOURCE) $(LIBS) $(CC_FLAGS)

@@ -89,7 +89,7 @@ void connection(void *arg) {
     memset(buffer, 0, BUFFER_SIZE);
     errno = recv(connected_socket, buffer, sizeof(buffer), 0);
 
-    if(!strcmp(buffer, "sair")){
+    if(!strncmp(buffer, "sair", 4)){
       printf("Conexão fechada por commando \"sair\".");
       shutdown(connected_socket, SHUT_RDWR);
 

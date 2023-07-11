@@ -13,4 +13,4 @@ rascunhos
 .idea
 bin
 venv
-
+*.out
