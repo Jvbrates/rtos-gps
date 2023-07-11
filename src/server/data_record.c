@@ -54,7 +54,7 @@ int data_get_line(FILE* fpointer, data_line *write_data){
 
 
 
-    return fscanf(fpointer, "%lf,%lf,%lf,%d,%d,%lf,%lf\n",
+    int r =  fscanf(fpointer, "%lf,%lf,%lf,%d,%d,%lf,%lf\n",
                 &(write_data->position.t_lat),
                 &(write_data->position.t_long),
                 &(write_data->position.height),
@@ -63,6 +63,9 @@ int data_get_line(FILE* fpointer, data_line *write_data){
                 &(write_data->instant_speed),
                 &(write_data->max_speed)
                   );
+
+
+    return r;
 }
 
 
@@ -91,7 +94,7 @@ int data_iterate_lines(file_stat fs, int line_start, int line_end,
     }
 
     fclose(fpoiter);
-    return 0;
+    return r_func_it;
 }
 
 
@@ -108,29 +111,28 @@ int test_func_iterate(data_line dl, void *arg){
     return 0;
 }
 
+int count_line(char *file_path){
+    FILE * f = fopen(file_path, "r");
+
+    char c;
+
+    int count = 0;
+    while (!feof(f)) {
+      fscanf(f, "%c", &c);
+      if(c == '\n')
+        count++;
+    }
+
+    fclose(f);
+
+    return count;
+}
 
 
-/*
-int main() {
-  file_stat fs = {"test_file", 52, 8};
+int omain() {
+  file_stat fs = {"record.csv", 52, 8};
 
-
-  data_line dl;
-  dl.position.satellites = 3;
-  dl.position.t_lat = 0;
-  dl.position.t_long = 4.3;
-  dl.position.quality = 4;
-  dl.position.height = 4.643543;
-
-  dl.max_speed = 66;
-  dl.INST_SPEED = 664;
-
-  printf("linhas: %d", fs.line_count);
-
-  data_record(&fs, dl);
-
-  printf("linhas: %d", fs.line_count);
 
   data_iterate_lines(fs, 0, 7, test_func_iterate, NULL);
   return 0;
-}*/
+}

@@ -24,8 +24,6 @@ typedef struct {
 
   sigset_t *expected_signals;
 
-  timer_control control;
-
 } gps_set_thread_arg;
 
 typedef struct {
@@ -47,7 +45,7 @@ typedef struct {
   pthread_mutex_t *mutex_globals_pos;
   sigset_t *expected_signals;
   loop_control enable;
-  timer_control timer;
+  timer_control *timer;
   triple_cond_t enable_cond;
 
 } blocker_tracker_thread_arg;
@@ -59,8 +57,10 @@ typedef struct {
   pthread_mutex_t *mutex_globals_pos;
   sigset_t *expected_signals;
   loop_control enable;
+  triple_cond_t enable_cond;
+
   struct triple_cond reducer;
-  timer_control timer;
+  timer_control *timer;
 
 } blocker_thread_arg;
 
@@ -69,9 +69,9 @@ typedef struct {
 
   sigset_t *expected_signals;
   triple_cond_t control_enable;
+  triple_cond_t km_reduction;
   speed_struct_t speed_limit;
-  speed reduction;
-  timer_control timer;
+  timer_control *timer;
 
 } reducer_thread_arg;
 

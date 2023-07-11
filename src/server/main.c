@@ -67,8 +67,8 @@ void init(){
   fs_record.mutex = malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(fs_record.mutex, NULL);
   strcpy(fs_record.file_path, "record.csv");
-  fs_record.line_count = 0;
-  fs_record.line_size = 800;
+  fs_record.line_count = count_line(fs_record.file_path);
+  fs_record.line_size = 52;
 
 
   // Record
@@ -130,6 +130,7 @@ void init(){
   //blocker
   strcpy(blocker_s.file_path,"route.txt");
   blocker_s.enable = 1;
+  blocker_s.enable_cond = blocker_enable;
   blocker_s.mutex_globals_pos = &global_position_mutex;
   blocker_s.global_pos = &GPS_DATA;
   blocker_s.expected_signals = malloc(sizeof(sigset_t));
@@ -138,7 +139,6 @@ void init(){
 
 
   //reducer
-  reducer_s.reduction = 5;
   reducer_s.speed_limit = SPEED_LIMIT;
   reducer_s.control_enable.enable = malloc(sizeof(int));
   *(reducer_s.control_enable.enable) = 0; //Inicia-se desativado
@@ -149,6 +149,11 @@ void init(){
   reducer_s.expected_signals = malloc(sizeof(sigset_t));
   sigemptyset(reducer_s.expected_signals);
   sigaddset(reducer_s.expected_signals, SIGRED);
+  reducer_s.km_reduction.enable = malloc(sizeof(int));
+  *(reducer_s.km_reduction.enable) = 0; //Inicia-se desativado
+  reducer_s.km_reduction.mutex = malloc(sizeof(pthread_mutex_t));
+  pthread_mutex_init(reducer_s.km_reduction.mutex, NULL);
+
 
 
   blocker_s.reducer = reducer_s.control_enable;
@@ -179,14 +184,14 @@ void init_timers(){
   tolerance_timer.setup = own_itimerspec(10, 0); //CountDown
   own_timer_create(&tolerance_timer);
   printf("CRIANDO TIMER [%d], mas NÃO ativando\n", SIGTOL);
-  blocker_tracker_s.timer = tolerance_timer;
+  blocker_tracker_s.timer = &tolerance_timer;
   //own_timer_set(&tolerance_timer);
 
   reduction_timer.sigevent = own_sigevent_create(SIGRED);
   reduction_timer.setup = own_itimerspec(10, 0); //CountDown
   own_timer_create(&reduction_timer);
 
-  reducer_s.timer = reduction_timer;
+  reducer_s.timer = &reduction_timer;
 
 
   printf("CRIANDO TIMER [%d], mas NÃO ativando\n", SIGRED);
@@ -230,38 +235,19 @@ int main(){
 
   pthread_create(&reducer_thread_t, NULL, &reducer_thread, &reducer_s);
 
-  //TODO: Implementar
-  //pthread_create(&connection_thread_t, NULL, &connection_thread, &connection_s);
-
-  //-----------------------------------//
-  //-----------[DEBUG]----------------//
- /* int a;
-
-  sigset_t debug_set;
-  sigemptyset(&debug_set);
-  //sigaddset(&debug_set, SIGGPS);
-  sigaddset(&debug_set, SIGBLK);
-  sigaddset(&debug_set, SIGTOL);
-  sigaddset(&debug_set, SIGRED);
-  sigwait(&debug_set, &a);
-  printf("[%d]\n\n", a);
-
-  sigwait(&debug_set, &a);
-  printf("[%d]\n\n", a);
-
-  sigwait(&debug_set, &a);
-  printf("[%d]\n\n", a);
-
-  sigwait(&debug_set, &a);
-  printf("[%d]\n\n", a);
-  */
-
   command_control_arg cc_debug;
 
   cc_debug.gps.gps_timer = gps_timer;
   cc_debug.record.enable = record_enable;
   cc_debug.locker.enable = blocker_enable;
+  cc_debug.locker.km_reduction = reducer_s.km_reduction;
+  cc_debug.locker.tolerance_timer = &tolerance_timer;
+  cc_debug.locker.blocker_timer = &blocker_tracker_timer;
   cc_debug.record.snapshot = record_cond;
+  cc_debug.record.fs = &fs_record;
+  cc_debug.load_route.locker_cond = blocker_enable;
+
+  cc_debug.load_route.fdesc = malloc(sizeof(FILE *));
 
   print_cc_control(cc_debug);
 

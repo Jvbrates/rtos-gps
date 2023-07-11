@@ -1,10 +1,11 @@
+#include "headers/command_control.h"
 #include "headers/timers.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "headers/command_control.h"
 
 #ifndef PORT_LISTEN
   #define PORT_LISTEN 50012
@@ -17,7 +18,6 @@
 /* Interpretador dos comandos enviados pelo cliente
  * Usarei os comandos específico para socket (netinet) para manter o padrao
  * Isto é, send, recv e shutdown ao inves de write, read e close*/
-
 
 arg_set parse(char *input){
   arg_set arg = {0};
@@ -33,9 +33,17 @@ arg_set parse(char *input){
   return arg;
 }
 
+typedef struct data {
+  int end;
+  union {
+    data_line data;
+    char msg[100];
+  }data_msg;
+} record_data;
+
 void print_cc_control(command_control_arg arg){
   printf("------------------------------------\n");
-  printf( "%d, %d, %d\n",arg.gps.gps_timer.t_id,arg.gps.gps_timer.setup->it_interval.tv_sec, arg.gps.gps_timer.setup->it_interval.tv_nsec);
+  printf( "%ld, %ld, %ld\n",arg.gps.gps_timer.t_id,arg.gps.gps_timer.setup->it_interval.tv_sec, arg.gps.gps_timer.setup->it_interval.tv_nsec);
   printf("------------------------------------\n");
 }
 
@@ -43,7 +51,6 @@ void connection(void *arg) {
   struct sockaddr_in serv_addr, cli_addr;
   socklen_t clilen;
   int sockfd, errno;
-  long i;
 
   // Criando socket
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -98,7 +105,7 @@ void connection(void *arg) {
     // Aqui o tratamento do comando
 
     arg_set argumentos = parse(buffer);
-    command_control(arg, buffer, argumentos);
+    command_control(arg, buffer, argumentos, connected_socket);
 
     errno = send(connected_socket, buffer, sizeof(buffer), 0);
 
@@ -156,7 +163,25 @@ int cond_set(char *str, triple_cond_t cond){
     return 0;
 }
 
-void record_control(struct command_record c_rec, arg_set parsed, char response[BUFFER_SIZE]){
+int record_send(data_line dl, void *fd){
+    record_data send_pack = {
+      0,
+      dl
+    };
+
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    memcpy(buffer, &send_pack, sizeof(send_pack));
+
+    int n =  (int)send((uintptr_t)fd, buffer, BUFFER_SIZE, 0);
+
+    if(n > 0)
+      return 0;
+    return n;
+
+}
+
+void record_control(struct command_record c_rec, arg_set parsed, char response[BUFFER_SIZE], uintptr_t fd){
     if(!strcmp(parsed.arguments[1], "set")){
       if(!cond_set(parsed.arguments[2], c_rec.enable)){
         pthread_cond_broadcast(c_rec.enable.cond);
@@ -164,17 +189,40 @@ void record_control(struct command_record c_rec, arg_set parsed, char response[B
         sprintf(c, "record set %s", parsed.arguments[2]);
         strcpy(response, c);
         free(c);
-      } else {
+      }
+      else {
         strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | record set ???");
       }
-    } else if (!strcmp(parsed.arguments[1], "get")){
-      strcpy(response, "IMplement it \"get\"!");
-    } else if (!strcmp(parsed.arguments[1], "snapshot")){
+    }
+    else if (!strcmp(parsed.arguments[1], "get")){
+      int line_start  = atoi(parsed.arguments[2]);
+      int line_end  = atoi(parsed.arguments[3]);
+
+      //----------Send lines of file
+      int r = data_iterate_lines(*(c_rec.fs), line_start, line_end, record_send, (void *)fd);
+
+      //----------Indicate end of file read->send
+      record_data send_pack = {0};
+      send_pack.end = 1;
+      char buffer[BUFFER_SIZE];
+      memset(buffer, 0, BUFFER_SIZE);
+      memcpy(buffer, &send_pack, sizeof(send_pack));
+      (int)send((int)fd, buffer, BUFFER_SIZE, 0);
+
+      //-----------End of command procedure
+      char *c = malloc(BUFFER_SIZE-10);
+      sprintf(c, "Received file operation [%d]", r);
+      strcpy(response, c);
+      free(c);
+
+    }
+    else if (!strcmp(parsed.arguments[1], "snapshot")){
         //Set and Wake up data_record
         set_enable(c_rec.snapshot, 1);
         pthread_cond_broadcast(c_rec.snapshot.cond);
         strcpy(response, "signal sended to snapshot");
-    } else {
+    }
+    else {
       strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | record ???");
     }
 }
@@ -191,7 +239,22 @@ void locker_control(struct command_locker c_loc, arg_set parsed, char response[B
         strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | locker set ???");
       }
     } else if (!strcmp(parsed.arguments[1], "config")){
-      strcpy(response, "Implement it! \"config\" v");
+
+      set_enable(c_loc.km_reduction, atoi(parsed.arguments[2]));
+      c_loc.blocker_timer->setup->it_interval.tv_sec = atoi(parsed.arguments[3]);
+
+      c_loc.tolerance_timer->setup->it_value.tv_sec = atoi(parsed.arguments[4]);
+      own_timer_set(c_loc.blocker_timer);
+
+
+      char * tmp = malloc(150);
+
+      //sprintf(tmp, "GPS read interval set to %ld",
+        //      c_gps.gps_timer.setup->it_interval.tv_sec);
+
+      strcpy(response, tmp);
+
+      free(tmp);
     } else {
       strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | locker ???");
     }
@@ -199,10 +262,10 @@ void locker_control(struct command_locker c_loc, arg_set parsed, char response[B
 
 void load_route_control(struct command_load_route c_lr, arg_set parsed, char response[BUFFER_SIZE]){
     if(!strcmp(parsed.arguments[1], "open")){
-      if(c_lr.fdesc){
+      if(*(c_lr.fdesc)){
         strcpy(response, "file already open");
       } else {
-        c_lr.fdesc = fopen("tmploadfile.csv", "w");
+        *(c_lr.fdesc) = fopen("tmploadfile.csv", "w");
         char *c = malloc(200);
         sprintf(c, "File opened [%p]", c_lr.fdesc);
         strcpy(response, c);
@@ -210,8 +273,9 @@ void load_route_control(struct command_load_route c_lr, arg_set parsed, char res
       }
     }
     else if(!strcmp(parsed.arguments[1], "close")){
-      if(c_lr.fdesc){
-        int r  = fclose(c_lr.fdesc);
+      if(*(c_lr.fdesc)){
+        int r  = fclose(*(c_lr.fdesc));
+        *(c_lr.fdesc) = NULL;
         char *c = malloc(200);
         sprintf(c, "File closed [%i].",r);
         strcpy(response, c);
@@ -223,7 +287,7 @@ void load_route_control(struct command_load_route c_lr, arg_set parsed, char res
     else if(!strcmp(parsed.arguments[1], "write")){
 
       char *d;
-      int r = fprintf(c_lr.fdesc, "%Lf,%Lf,%Lf",
+      int r = fprintf(*(c_lr.fdesc), "%Lf,%Lf,%Lf\n",
                       strtold(parsed.arguments[2], &d),
                       strtold(parsed.arguments[3], &d),
                       strtold(parsed.arguments[4], &d));
@@ -241,23 +305,28 @@ void load_route_control(struct command_load_route c_lr, arg_set parsed, char res
 
     }
     else if(!strcmp(parsed.arguments[1], "commit")){
-        if(c_lr.fdesc){
+      pthread_mutex_lock(c_lr.locker_cond.mutex);
+        int en = *(c_lr.locker_cond.enable);
+      pthread_mutex_unlock(c_lr.locker_cond.mutex);
+      set_enable(c_lr.locker_cond, 0);
+        if(*(c_lr.fdesc)){
           strcpy(response, "Close the file before commit.");
         } else {
           int r = rename("tmploadfile.csv", "route.csv");
-
           if(!r){
             strcpy(response, "Successfully commited.");
           } else {
-            strcpy(response, "Failure on rename()");
+            strcpy(response, "Failure on rename().");
           }
         }
+      set_enable(c_lr.locker_cond, en);
+
     } else {
       strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | load_route ???");
     }
 }
 
-void command_control(void *arg, char response[BUFFER_SIZE], arg_set parsed){
+void command_control(void *arg, char response[BUFFER_SIZE], arg_set parsed, int fd){
 
    command_control_arg *cc_arg = (command_control_arg *)(arg);
 
@@ -270,9 +339,10 @@ void command_control(void *arg, char response[BUFFER_SIZE], arg_set parsed){
     gps_control(cc_arg->gps, parsed, response);
     break;
    case load_route:
+    load_route_control(cc_arg->load_route, parsed, response);
     break;
    case record:
-    record_control(cc_arg->record, parsed, response);
+    record_control(cc_arg->record, parsed, response, fd);
     break;
    case locker:
     locker_control(cc_arg->locker, parsed, response);

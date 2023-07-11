@@ -32,4 +32,6 @@ int data_iterate_lines(file_stat fs, int line_start, int line_end,
 
 int test_func_iterate(data_line dl, void *arg);
 
+int count_line(char *file_path);
+
 #endif // RTOS_GPS_DATA_RECORD_H

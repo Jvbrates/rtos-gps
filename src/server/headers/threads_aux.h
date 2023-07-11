@@ -21,4 +21,6 @@ void set_enable(triple_cond_t control, int setval);
 
 char *time_now();
 
+int get_value(triple_cond_t tripla);
+
 #endif // RTOS_GPS_THREADS_AUX_H

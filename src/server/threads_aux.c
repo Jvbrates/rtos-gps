@@ -42,3 +42,12 @@ char *time_now(){
 
   return c;
 }
+
+int get_value(triple_cond_t tripla){
+
+  pthread_mutex_lock(tripla.mutex);
+  int r = *(tripla.enable);
+  pthread_mutex_unlock(tripla.mutex);
+
+  return r;
+}

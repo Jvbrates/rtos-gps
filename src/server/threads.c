@@ -110,7 +110,7 @@ void *blocker_tracker_thread(void *structure){
       printf("Impossível definir rota");
     } else {
       printf("Fora de rota\n");
-      own_timer_set(&arg->timer);
+      own_timer_set(arg->timer);
     }
   }
 
@@ -122,7 +122,12 @@ void *blocker_thread(void *structure){
   blocker_thread_arg *arg = (blocker_thread_arg *)structure;
 
   //TODO Os enables também poderiam ser implementados com variaveis condicionais
-  while (arg->enable){
+  while (1){
+
+    printf("locker: Esperando enable por comando\n\n");
+    wait_enable(arg->enable_cond);
+    printf("locker: Recebeu enable por comando\n\n");
+
 
     int signal_recv; //To linter no complain
     sigwait(arg->expected_signals, &signal_recv);
@@ -136,12 +141,10 @@ void *blocker_thread(void *structure){
 
     //Caso esteja fora de rota
     if (on_route(arg->file_path, local_copy) != 1){
-      //Desativa verificação blocker_tracker
-      //FIXME como valores enables serão lido e escritos por mais de uma thread
-      //quem sabe deveriam também ter seus mutexes
-      //arg->enable = 0;
 
-      //Ativa  reduce speed
+      //Desativa verificação blocker_tracker
+      set_enable(arg->enable_cond, 0);
+      //Ativa reduce speed
       set_enable(arg->reducer, 1);
       pthread_cond_broadcast(arg->reducer.cond);
     }
@@ -161,7 +164,7 @@ _Noreturn void *reducer_thread(void *structure) {
 
     while (1) {
 
-      own_timer_set(&(arg->timer));
+      own_timer_set((arg->timer));
       int sig;
       sigwait(arg->expected_signals, &sig);
       char *c = time_now();
@@ -172,8 +175,9 @@ _Noreturn void *reducer_thread(void *structure) {
 
       get_speed_limit(&(arg->speed_limit));
 
+      int km_reduction = get_value(arg->km_reduction);
       if (*(arg->speed_limit.data) >= 0) {
-        speed new_limit = *(arg->speed_limit.data) - arg->reduction;
+        speed new_limit = *(arg->speed_limit.data) - km_reduction;
         speed_struct_t speedStruct = {&new_limit, arg->speed_limit.mutex
 
         };

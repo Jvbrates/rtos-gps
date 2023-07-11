@@ -17,7 +17,7 @@ add_executable(rtos_gps
         src/server/headers/threads_aux.h
         src/server/headers/velocimeter.h
         src/server/blocker_tracker.c
-        src/server/cmd_parser.c
+        src/server/command_control.c
         src/server/data_record.c
         src/server/gps_sensor.c
         src/server/main.c
