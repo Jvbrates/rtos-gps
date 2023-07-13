@@ -86,9 +86,9 @@ void *blocker_tracker_thread(void *structure){
 
   while (1){
 
-    printf("locker: Esperando enable por comando\n\n");
+    printf("locker: Esperando enable\n");
     wait_enable(arg->enable_cond);
-    printf("locker: Recebeu enable por comando\n\n");
+    printf("locker: Recebeu enable\n");
 
     int signal_recv; //To linter no complain
     printf("Esperando o sinal\n");
@@ -130,6 +130,7 @@ void *blocker_thread(void *structure){
 
 
     int signal_recv; //To linter no complain
+
     sigwait(arg->expected_signals, &signal_recv);
     char *c = time_now();
     printf("Sinal recebido por blocker [%d] (%s)\n", signal_recv, c);
@@ -140,7 +141,12 @@ void *blocker_thread(void *structure){
     pthread_mutex_unlock(arg->mutex_globals_pos);
 
     //Caso esteja fora de rota
-    if (on_route(arg->file_path, local_copy) != 1){
+    int ver = on_route(arg->file_path, local_copy);
+    if ( ver == 1){
+      printf("Em rota\n");
+    }else if( ver == 0xF17E) {
+      printf("Impossível definir rota");
+    } else {
 
       //Desativa verificação blocker_tracker
       set_enable(arg->enable_cond, 0);
@@ -154,13 +160,15 @@ void *blocker_thread(void *structure){
   pthread_exit(NULL);
 }
 
-_Noreturn void *reducer_thread(void *structure) {
+void *reducer_thread(void *structure) {
   //decode
   reducer_thread_arg *arg = (reducer_thread_arg *)structure;
 
   while (1) {
 
+    printf("Reducer: Esperando enable\n");
     wait_enable_dec(arg->control_enable); // Só precisa ser ativado uma vez
+    printf("Reducer: Passou enable\n");
 
     while (1) {
 

@@ -76,42 +76,45 @@ void connection(void *arg) {
   printf("Conexão aberta\n");
 
   int connected_socket;
-  connected_socket = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
-  char buffer[BUFFER_SIZE];
-  char ip[INET_ADDRSTRLEN];
-  int port_cli = ntohs(cli_addr.sin_port);
-  inet_ntop(AF_INET, &(cli_addr.sin_addr), ip, sizeof(ip));
-
-  printf("Conectado com %s:%i\n", ip, port_cli);
 
   while (1) {
+    connected_socket = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+    char buffer[BUFFER_SIZE];
+    char ip[INET_ADDRSTRLEN];
+    int port_cli = ntohs(cli_addr.sin_port);
+    inet_ntop(AF_INET, &(cli_addr.sin_addr), ip, sizeof(ip));
 
-    memset(buffer, 0, BUFFER_SIZE);
-    errno = recv(connected_socket, buffer, sizeof(buffer), 0);
+    printf("Conectado com %s:%i\n", ip, port_cli);
 
-    if(!strncmp(buffer, "sair", 4)){
-      printf("Conexão fechada por commando \"sair\".");
-      shutdown(connected_socket, SHUT_RDWR);
+    while (1) {
 
-      break;
-    }
+      memset(buffer, 0, BUFFER_SIZE);
+      errno = recv(connected_socket, buffer, sizeof(buffer), 0);
 
-    if (errno <= 0) {
-      printf("Erro recebendo do socket, fechando conexão");
-      shutdown(connected_socket, SHUT_RDWR);
-      break;
-    }
-    printf("Recebeu: %s - %lu\n", buffer, strlen(buffer));
-    // Aqui o tratamento do comando
+      if (!strncmp(buffer, "sair", 4)) {
+        printf("Conexão fechada por commando \"sair\".");
+        shutdown(connected_socket, SHUT_RDWR);
 
-    arg_set argumentos = parse(buffer);
-    command_control(arg, buffer, argumentos, connected_socket);
+        break;
+      }
 
-    errno = send(connected_socket, buffer, sizeof(buffer), 0);
+      if (errno <= 0) {
+        printf("Erro recebendo do socket, fechando conexão");
+        shutdown(connected_socket, SHUT_RDWR);
+        break;
+      }
+      printf("Recebeu: %s - %lu\n", buffer, strlen(buffer));
+      // Aqui o tratamento do comando
 
-    if (errno <= 0) {
-      printf("Erro enviando do socket, fechando conexão");
-      shutdown(connected_socket, SHUT_RDWR);
+      arg_set argumentos = parse(buffer);
+      command_control(arg, buffer, argumentos, connected_socket);
+
+      errno = send(connected_socket, buffer, sizeof(buffer), 0);
+
+      if (errno <= 0) {
+        printf("Erro enviando do socket, fechando conexão");
+        shutdown(connected_socket, SHUT_RDWR);
+      }
     }
   }
 }
@@ -152,10 +155,10 @@ void gps_control(struct command_gps c_gps, arg_set parsed, char response[BUFFER_
 };
 
 int cond_set(char *str, triple_cond_t cond){
-    if(!strcmp(str, "enable")){
+    if(!strncmp(str, "enable", 6)){
       set_enable(cond, 1);
-    } else if (!strcmp(str, "disable")) {
-      set_enable(cond, 1);
+    } else if (!strncmp(str, "disable", 7)) {
+      set_enable(cond, 0);
     } else {
       return  -1;
     }
@@ -220,7 +223,7 @@ void record_control(struct command_record c_rec, arg_set parsed, char response[B
         //Set and Wake up data_record
         set_enable(c_rec.snapshot, 1);
         pthread_cond_broadcast(c_rec.snapshot.cond);
-        strcpy(response, "signal sended to snapshot");
+        strcpy(response, "signal sent to snapshot");
     }
     else {
       strcpy(response, "COMMAND SYNTAX ERROR, NOT RECOGNIZED | record ???");

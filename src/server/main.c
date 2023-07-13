@@ -110,7 +110,7 @@ void init(){
   sigaddset(gps_set_struct.expected_signals, SIGGPS);
 
   //blocker_tracker
-  strcpy(blocker_tracker_s.file_path,"route.txt");
+  strcpy(blocker_tracker_s.file_path,"route.csv");
   blocker_tracker_s.enable = 1;
   blocker_tracker_s.mutex_globals_pos = &global_position_mutex;
   blocker_tracker_s.global_pos = &GPS_DATA;
@@ -122,13 +122,13 @@ void init(){
   blocker_enable.mutex = malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(blocker_enable.mutex, NULL);
   blocker_enable.enable = malloc(sizeof (int));
-  *(blocker_enable.enable) = 0; //Default Enable | FIXME
+  *(blocker_enable.enable) = 0; //Default disable | FIXME
   blocker_enable.cond = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(blocker_enable.cond, NULL);
   blocker_tracker_s.enable_cond = blocker_enable;
 
   //blocker
-  strcpy(blocker_s.file_path,"route.txt");
+  strcpy(blocker_s.file_path,"route.csv");
   blocker_s.enable = 1;
   blocker_s.enable_cond = blocker_enable;
   blocker_s.mutex_globals_pos = &global_position_mutex;
@@ -150,7 +150,7 @@ void init(){
   sigemptyset(reducer_s.expected_signals);
   sigaddset(reducer_s.expected_signals, SIGRED);
   reducer_s.km_reduction.enable = malloc(sizeof(int));
-  *(reducer_s.km_reduction.enable) = 0; //Inicia-se desativado
+  *(reducer_s.km_reduction.enable) = 10; //Inicia-se desativado
   reducer_s.km_reduction.mutex = malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(reducer_s.km_reduction.mutex, NULL);
 
@@ -213,6 +213,7 @@ int main(){
   pthread_sigmask(SIG_BLOCK, gps_set_struct.expected_signals, NULL);
   pthread_sigmask(SIG_BLOCK, blocker_tracker_s.expected_signals, NULL);
   pthread_sigmask(SIG_BLOCK, blocker_s.expected_signals, NULL);
+  pthread_sigmask(SIG_BLOCK, reducer_s.expected_signals, NULL);
 
   //-----------------------------------//
   //-----------[THREADS]----------------//

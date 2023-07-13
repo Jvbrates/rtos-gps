@@ -21,7 +21,7 @@ int data_record(file_stat *fs, data_line write_data){
     FILE * fpointer = fopen(fs->file_path, "a");
 
     if(!fpointer) {
-      printf("Erro na manipulação de arquivos\n");
+      printf("Erro na manipulação de arquivos data_record()\n");
       return 0xF17E;
     }
     printf("Escrevendooooooo\n");
@@ -37,7 +37,7 @@ int data_record(file_stat *fs, data_line write_data){
     fclose(fpointer);
 
     if(r < 0) {
-      printf("Erro na manipulação de arquivos\n");
+      printf("Erro na manipulação de arquivos data_record()\n");
       return 0xF17E;
     }
 
@@ -76,7 +76,7 @@ int data_iterate_lines(file_stat fs, int line_start, int line_end,
     fpoiter = fopen(fs.file_path, "r");
 
     if(!fpoiter || fs.line_count < line_end || line_start > line_end) {
-      printf("Erro na manipulação de arquivos\n");
+      printf("Erro na manipulação de arquivos data_iterate_lines()\n");
       return 0xF17E;
     }
 

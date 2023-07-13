@@ -18,14 +18,14 @@ int on_route(char file_path[250], gpgga_t_simplified position){
   FILE * file = fopen(file_path, "r");
 
   if(!file) {
-    printf("Erro ao abrir arquivo\n");
+    printf("[função on route]Erro ao abrir arquivo\n");
     return 0xF17E;
   }
 
   position_ray pr_read;
   while ( // Enquanto ainda houver arquivo para ser lido
       fscanf(file, "%lf,%lf,%lf",
-             &(pr_read.longitude),&(pr_read.latitude),&(pr_read.ray)) == 3
+             &(pr_read.latitude),&(pr_read.longitude),&(pr_read.ray)) == 3
       ){
     double  distance = haversine_distance(position, (gpgga_t_simplified){pr_read.latitude, pr_read.longitude, 0});
 
@@ -53,10 +53,10 @@ int create_file(){
 
   printf("%ld", sizeof(position_ray));
 
-  FILE * file = fopen("route.txt", "w");
+  FILE * file = fopen("route.csv", "w");
 
   if(!file) {
-      printf("Erro na manipulação de arquivos\n");
+      printf("Erro na manipulação de arquivos create_file()\n");
       return 0xF17E;
   }
 

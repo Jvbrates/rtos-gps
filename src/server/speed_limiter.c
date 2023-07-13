@@ -12,7 +12,9 @@ int get_speed_limit(speed_struct_t *s){
   FILE * file_decr;
 
   if((file_decr = fopen(FILE_SIM_sl, "r") )== NULL){
-    printf("Erro na manipulação de arquivos\n");
+    if(s->mutex!=NULL)
+      pthread_mutex_unlock(s->mutex);
+    printf("Erro na manipulação de arquivo speed\n");
     return 0xF17E;
   }
 
@@ -35,7 +37,9 @@ int set_speed_limit(speed_struct_t s){
   FILE  * file_decr;
 
   if((file_decr = fopen(FILE_SIM_sl, "w") )== NULL){
-    printf("Erro na manipulação de arquivos\n");
+    printf("Erro na manipulação de arquivo speed\n");
+    if(s.mutex!=NULL)
+      pthread_mutex_unlock(s.mutex);
     return 0xF17E;
   }
   //-----

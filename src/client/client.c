@@ -99,6 +99,16 @@ int simple_send_print(int fd_socket, char buffer[BUFFER_SIZE]){
   return 0;
 }
 
+
+void add_end(char *buffer){
+  for (int i = 0; i < BUFFER_SIZE; ++i) {
+    if(buffer[i] == '\0') {
+      buffer[i] = ';';
+      break ;
+    }
+  }
+}
+
 arg_set parse(char *input){
   arg_set arg = {0};
 
@@ -219,6 +229,7 @@ int main(int argc, char *argv[]) {
     bzero(buffer,sizeof(buffer));
     printf("Digite a mensagem (ou sair):");
     fgets(buffer,sizeof(buffer),stdin);
+    add_end(buffer);
 
     if(!strncmp(buffer, "load_route", 10)){
 
@@ -237,6 +248,7 @@ int main(int argc, char *argv[]) {
       shutdown(sockfd, SHUT_RDWR);
       return -1;
     }
+
     if (strcmp(buffer,"sair\n") == 0) {
       break;
     }

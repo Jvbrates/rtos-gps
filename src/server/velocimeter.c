@@ -11,7 +11,7 @@ int get_speed(speed *km_h){
   FILE  * file_decr;
 
   if((file_decr = fopen(FILE_SIM, "r") )== NULL){
-    printf("Erro na manipulação de arquivos");
+    printf("Erro na manipulação de arquivos get_speed");
     return 0xF17E;
   }
   //-----
