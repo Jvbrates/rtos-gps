@@ -65,6 +65,8 @@ void *data_record_thread(void *structure){
      dl.instant_speed = (*(arg->instant_speed.data) -
                           (int)(*(arg->instant_speed.data))) +
                          ((int)(*(arg->instant_speed.data)) % (int)dl.max_speed);
+
+     printf("Velocidade Instantânea %lf", dl.instant_speed);
     pthread_mutex_unlock(arg->instant_speed.mutex);
 
     data_record(arg->fs, dl);

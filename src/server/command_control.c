@@ -119,7 +119,7 @@ void connection(void *arg) {
   }
 }
 
-typedef enum {undefined, GPS, load_route, record, locker} opcode;
+typedef enum {undefined, GPS, load_route, record, locker, status} opcode;
 
 opcode switch_aux(char* op){
    if(!strcmp("record", op))
@@ -130,9 +130,10 @@ opcode switch_aux(char* op){
     return load_route;
    if(!strcmp("locker", op))
     return locker;
+   if(!strcmp("status", op))
+    return status;
    return undefined;
 }
-
 
 void gps_control(struct command_gps c_gps, arg_set parsed, char response[BUFFER_SIZE]){
     if(!strcmp(parsed.arguments[1], "read_interval")){
@@ -329,6 +330,25 @@ void load_route_control(struct command_load_route c_lr, arg_set parsed, char res
     }
 }
 
+void status_f(command_control_arg arg, char response[BUFFER_SIZE]){
+    int interval_gps = arg.gps.gps_timer.setup->it_interval.tv_sec;
+    int locker_enable = get_value(arg.load_route.locker_cond);
+    int record_enable = get_value(arg.record.enable);
+    int interval_blocker = arg.locker.blocker_timer->setup->it_interval.tv_sec;
+    int tolerance_timer = arg.locker.tolerance_timer->setup->it_value.tv_sec;
+    int km_reduction = get_value(arg.locker.km_reduction);
+
+
+    sprintf(response, "Timer GPS_READ: %d\nTimer BLOCKER: %d\nRECORD enable: %d\nTOLERANCE Timer: %d\nLOCKER enable: %d\nRECORD enable: %d\nKM_reduction: %d\n",
+            interval_gps,
+            interval_blocker,
+            record_enable,
+            tolerance_timer,
+            locker_enable,
+            record_enable,
+            km_reduction);
+}
+
 void command_control(void *arg, char response[BUFFER_SIZE], arg_set parsed, int fd){
 
    command_control_arg *cc_arg = (command_control_arg *)(arg);
@@ -349,6 +369,10 @@ void command_control(void *arg, char response[BUFFER_SIZE], arg_set parsed, int 
     break;
    case locker:
     locker_control(cc_arg->locker, parsed, response);
+    break;
+   case status:
+    printf("CAse status:\n");
+    status_f(*cc_arg, response);
     break;
    }
 

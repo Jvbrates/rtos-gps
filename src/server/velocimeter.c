@@ -23,7 +23,7 @@ int get_speed(speed *km_h){
 
   fscanf(file_decr, "%lf", km_h);
 
-  printf("Velocidade lida %lf", *km_h);
+  //printf("Velocidade lida %lf", *km_h);
 
   if(feof(file_decr))
     pointer_count = 0;
